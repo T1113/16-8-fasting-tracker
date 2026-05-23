@@ -7,6 +7,13 @@ A multi-platform 16:8 intermittent fasting tracker and timer. This project provi
 ### 🌟 [Live Demo (在线体验)](https://t1113.github.io/16-8-fasting-tracker/mobile.html)
 *(Click to use the Mobile Web version immediately / 点击立即体验移动网页版)*
 
+## 💡 Why use this? (为什么选择这个？)
+
+市面上有许多断食软件，但我们与众不同：
+- 🚫 **No Ads, No Subscriptions (零广告，零内购)**: Completely free forever. (永久完全免费，没有烦人的弹窗和诱导付费)。
+- 🔒 **100% Privacy (绝对隐私)**: No accounts required. All data stays locally on your device. (无需注册账号，所有数据均保存在本地，你的数据只属于你自己)。
+- 📱 **Cross-Platform (全平台覆盖)**: From a mobile PWA to a terminal CLI, use it wherever you are. (无论是在手机浏览器、电脑桌面还是终端命令行，都可以无缝使用)。
+
 ## 📸 Screenshots (运行截图)
 
 | Desktop Web (`index.html`) | Mobile Web (`mobile.html`) |
