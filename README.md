@@ -4,6 +4,9 @@ A multi-platform 16:8 intermittent fasting tracker and timer. This project provi
 
 这是一个多平台的 16+8 间歇性禁食追踪器与闹钟。本项目提供了多种界面供你记录进食和禁食窗口，且所有界面的设置逻辑互通、无缝同步。
 
+### 🌟 [Live Demo (在线体验)](https://t1113.github.io/16-8-fasting-tracker/mobile.html)
+*(Click to use the Mobile Web version immediately / 点击立即体验移动网页版)*
+
 ## 📸 Screenshots (运行截图)
 
 | Desktop Web (`index.html`) | Mobile Web (`mobile.html`) |
