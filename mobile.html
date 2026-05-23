@@ -1,0 +1,622 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1a1d24">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="16+8">
+<meta name="format-detection" content="telephone=no">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%231a1d24'/%3E%3Ctext x='90' y='118' text-anchor='middle' font-size='90' font-family='-apple-system' font-weight='700' fill='%237dd886'%3E16%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='10' fill='%237dd886'/%3E%3C/svg%3E">
+<title>16+8 · 间歇性禁食</title>
+<style>
+  :root {
+    --bg:           oklch(16% 0.02 250);
+    --bg-grad-1:    oklch(22% 0.04 260);
+    --bg-grad-2:    oklch(14% 0.02 245);
+    --card:         oklch(24% 0.025 250 / 0.55);
+    --border:       oklch(45% 0.02 250 / 0.35);
+    --text:         oklch(97% 0.01 250);
+    --muted:        oklch(62% 0.015 250);
+    --track:        oklch(30% 0.02 250 / 0.6);
+
+    --eat:          oklch(76% 0.18 145);
+    --eat-soft:     oklch(76% 0.18 145 / 0.18);
+    --eat-glow:     oklch(76% 0.18 145 / 0.35);
+    --fast:         oklch(80% 0.16 65);
+    --fast-soft:    oklch(80% 0.16 65 / 0.18);
+    --fast-glow:    oklch(80% 0.16 65 / 0.35);
+
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+
+    --safe-t: env(safe-area-inset-top);
+    --safe-b: env(safe-area-inset-bottom);
+    --safe-l: env(safe-area-inset-left);
+    --safe-r: env(safe-area-inset-right);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+
+  body {
+    font-family: var(--sans);
+    color: var(--text);
+    background:
+      radial-gradient(ellipse 100% 50% at 50% 0%, var(--bg-grad-1), transparent 70%),
+      radial-gradient(ellipse 80% 50% at 50% 100%, var(--bg-grad-2), transparent 70%),
+      var(--bg);
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+
+  .app {
+    height: 100dvh;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    padding:
+      calc(var(--safe-t) + 16px)
+      calc(var(--safe-r) + 20px)
+      calc(var(--safe-b) + 20px)
+      calc(var(--safe-l) + 20px);
+    gap: 16px;
+  }
+
+  /* ---- header ---- */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .brand .sub { font-size: 13px; color: var(--muted); font-weight: 400; }
+  .now-time {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- main ring ---- */
+  main {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 12px;
+    align-items: center;
+    justify-items: center;
+    min-height: 0;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  body[data-state="eating"] .badge { background: var(--eat-soft); color: var(--eat); }
+  body[data-state="fasting"] .badge { background: var(--fast-soft); color: var(--fast); }
+  .badge .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 8px currentColor;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  .ring-wrap {
+    position: relative;
+    width: min(78vw, 56dvh, 360px);
+    aspect-ratio: 1;
+    display: grid;
+    place-items: center;
+  }
+  .ring-wrap svg {
+    width: 100%; height: 100%;
+    transform: rotate(-90deg);
+    overflow: visible;
+  }
+  .ring-track { stroke: var(--track); }
+  .ring-progress {
+    transition: stroke-dashoffset 0.9s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.6s ease;
+  }
+  body[data-state="eating"] .ring-progress { stroke: var(--eat); filter: drop-shadow(0 0 12px var(--eat-glow)); }
+  body[data-state="fasting"] .ring-progress { stroke: var(--fast); filter: drop-shadow(0 0 12px var(--fast-glow)); }
+
+  .ring-center {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    text-align: center;
+  }
+  .ring-center .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .ring-center .countdown {
+    font-family: var(--mono);
+    font-size: clamp(40px, 11vw, 64px);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .ring-center .until {
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .summary {
+    font-size: 13px;
+    color: var(--muted);
+    text-align: center;
+  }
+  .summary b { color: var(--text); font-weight: 600; }
+  .summary .dot-sep { margin: 0 8px; opacity: 0.5; }
+
+  /* ---- footer card ---- */
+  footer {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    padding: 16px;
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    display: grid;
+    gap: 12px;
+  }
+
+  .inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .field { display: grid; gap: 4px; }
+  .field label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--muted);
+  }
+  .field input[type="time"] {
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 600;
+    background: oklch(28% 0.02 250 / 0.55);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 12px;
+    padding: 10px 12px;
+    width: 100%;
+    color-scheme: dark;
+    min-height: 44px; /* iOS tap target */
+    text-align: center;
+    transition: border-color 0.2s, background 0.2s;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  .field input[type="time"]:focus {
+    outline: none;
+    border-color: oklch(70% 0.15 250 / 0.7);
+    background: oklch(30% 0.02 250 / 0.7);
+  }
+  /* hide the native picker indicator on iOS for cleaner look */
+  .field input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.4; }
+  .field input[type="time"]::-webkit-date-and-time-value { text-align: center; }
+
+  .row-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-height: 36px;
+    font-family: inherit;
+  }
+  .chip:active { transform: scale(0.96); }
+  .chip[data-on="true"] {
+    background: oklch(60% 0.14 250 / 0.2);
+    color: oklch(85% 0.12 250);
+    border-color: oklch(60% 0.14 250 / 0.5);
+  }
+  .chip .ico { font-size: 14px; line-height: 1; }
+
+  /* ---- transition flash overlay ---- */
+  .flash {
+    position: fixed; inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    background: radial-gradient(ellipse at center, var(--eat-glow), transparent 70%);
+  }
+  .flash.show { opacity: 1; animation: flashPulse 1.6s ease-out 2; }
+  @keyframes flashPulse {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 1; }
+  }
+
+  /* small phones */
+  @media (max-height: 700px) {
+    .ring-wrap { width: min(60vw, 50dvh, 280px); }
+    .ring-center .countdown { font-size: clamp(34px, 9vw, 52px); }
+    .field input[type="time"] { font-size: 18px; padding: 8px 10px; }
+  }
+</style>
+</head>
+<body data-state="fasting">
+  <div class="app">
+    <header>
+      <div class="brand">16 + 8 <span class="sub">间歇性禁食</span></div>
+      <div class="now-time" id="nowTime">--:--:--</div>
+    </header>
+
+    <main>
+      <span class="badge"><span class="dot"></span><span id="stateText">载入中…</span></span>
+
+      <div class="ring-wrap">
+        <svg viewBox="0 0 100 100" aria-hidden="true">
+          <circle class="ring-track" cx="50" cy="50" r="44" fill="none" stroke-width="5"/>
+          <circle id="ringProgress" class="ring-progress"
+                  cx="50" cy="50" r="44" fill="none" stroke-width="5"
+                  stroke-linecap="round"
+                  stroke-dasharray="276.46" stroke-dashoffset="276.46"/>
+        </svg>
+        <div class="ring-center">
+          <div class="label" id="phaseLabel">距下次切换</div>
+          <div class="countdown" id="countdown">--:--:--</div>
+          <div class="until" id="untilText">—</div>
+        </div>
+      </div>
+
+      <div class="summary">
+        进食 <b id="eatHours">8h</b>
+        <span class="dot-sep">·</span>
+        禁食 <b id="fastHours">16h</b>
+      </div>
+    </main>
+
+    <footer>
+      <div class="inputs">
+        <div class="field">
+          <label for="startInput">开始进食</label>
+          <input type="time" id="startInput" value="12:00" step="60">
+        </div>
+        <div class="field">
+          <label for="endInput">结束进食</label>
+          <input type="time" id="endInput" value="20:00" step="60">
+        </div>
+      </div>
+      <div class="row-actions">
+        <button class="chip" id="soundChip" data-on="true">
+          <span class="ico" id="soundIco">🔔</span><span id="soundLbl">提示音 开</span>
+        </button>
+        <button class="chip" id="wakeChip" data-on="false">
+          <span class="ico">📱</span><span id="wakeLbl">屏幕常亮</span>
+        </button>
+      </div>
+    </footer>
+  </div>
+
+  <div class="flash" id="flash"></div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const startInput = $('startInput');
+  const endInput   = $('endInput');
+  const soundChip  = $('soundChip');
+  const wakeChip   = $('wakeChip');
+  const nowTimeEl  = $('nowTime');
+  const stateText  = $('stateText');
+  const countdown  = $('countdown');
+  const untilText  = $('untilText');
+  const phaseLabel = $('phaseLabel');
+  const ringProg   = $('ringProgress');
+  const eatHoursEl = $('eatHours');
+  const fastHoursEl= $('fastHours');
+  const soundLbl   = $('soundLbl');
+  const soundIco   = $('soundIco');
+  const wakeLbl    = $('wakeLbl');
+  const flashEl    = $('flash');
+
+  const STORE_KEY = 'fasting-16-8-config-v1';
+  const RING_CIRC = 2 * Math.PI * 44;
+
+  let soundOn = true;
+  let wakeLock = null;
+
+  // ---- persistence ----
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) {
+      const cfg = JSON.parse(raw);
+      if (cfg.start) startInput.value = cfg.start;
+      if (cfg.end)   endInput.value   = cfg.end;
+      if (typeof cfg.sound === 'boolean') soundOn = cfg.sound;
+    }
+  } catch {}
+
+  function save() {
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify({
+        start: startInput.value,
+        end: endInput.value,
+        sound: soundOn,
+      }));
+    } catch {}
+  }
+
+  function updateSoundChip() {
+    soundChip.dataset.on = String(soundOn);
+    soundIco.textContent = soundOn ? '🔔' : '🔕';
+    soundLbl.textContent = soundOn ? '提示音 开' : '提示音 关';
+  }
+  updateSoundChip();
+
+  // ---- time math ----
+  function parseHHMM(s) { const [h,m]=s.split(':').map(Number); return {h:h|0,m:m|0}; }
+  function nextOccurrence(hhmm, now) {
+    const { h, m } = parseHHMM(hhmm);
+    const d = new Date(now);
+    d.setHours(h, m, 0, 0);
+    if (d <= now) d.setDate(d.getDate() + 1);
+    return d;
+  }
+  function windowMinutes(s, e) {
+    const a = parseHHMM(s), b = parseHHMM(e);
+    let diff = (b.h*60+b.m) - (a.h*60+a.m);
+    if (diff <= 0) diff += 1440;
+    return diff;
+  }
+  const pad = (n) => String(n).padStart(2, '0');
+  function fmtClock(d) { return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; }
+  function fmtHM(d) { return `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+  function fmtDuration(ms) {
+    if (ms < 0) ms = 0;
+    const s = Math.floor(ms / 1000);
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    return `${pad(h)}:${pad(m)}:${pad(s % 60)}`;
+  }
+
+  // ---- audio (iOS requires user gesture to start) ----
+  let audioCtx = null;
+  function unlockAudio() {
+    if (audioCtx) return;
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      // empty buffer warms up the pipe on iOS
+      const buf = audioCtx.createBuffer(1, 1, 22050);
+      const src = audioCtx.createBufferSource();
+      src.buffer = buf;
+      src.connect(audioCtx.destination);
+      src.start(0);
+    } catch {}
+  }
+  function beep() {
+    if (!soundOn) return;
+    try {
+      if (!audioCtx) unlockAudio();
+      if (!audioCtx) return;
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const ctx = audioCtx;
+      const play = (freq, when, dur) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = 'sine';
+        o.frequency.value = freq;
+        g.gain.setValueAtTime(0.0001, ctx.currentTime + when);
+        g.gain.exponentialRampToValueAtTime(0.28, ctx.currentTime + when + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + when + dur);
+        o.connect(g).connect(ctx.destination);
+        o.start(ctx.currentTime + when);
+        o.stop(ctx.currentTime + when + dur + 0.05);
+      };
+      play(880, 0,    0.25);
+      play(660, 0.30, 0.25);
+      play(880, 0.60, 0.35);
+    } catch {}
+  }
+
+  // ---- haptic on Android, no-op on iOS Safari ----
+  function vibrate(pattern) {
+    try { if (navigator.vibrate) navigator.vibrate(pattern); } catch {}
+  }
+
+  // ---- notification (mostly Android; iOS only when added to home screen on 16.4+) ----
+  function notify(title, body) {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      try { new Notification(title, { body, silent: true }); } catch {}
+    }
+    beep();
+    vibrate([200, 100, 200, 100, 400]);
+    flashEl.classList.remove('show');
+    void flashEl.offsetWidth;
+    flashEl.classList.add('show');
+    setTimeout(() => flashEl.classList.remove('show'), 4000);
+  }
+
+  // ---- title flashing as backup ----
+  const baseTitle = document.title;
+  let flashTimer = null;
+  function flashTitle(msg, dur = 20000) {
+    if (flashTimer) clearInterval(flashTimer);
+    let on = true;
+    const start = Date.now();
+    flashTimer = setInterval(() => {
+      document.title = on ? `🔔 ${msg}` : baseTitle;
+      on = !on;
+      if (Date.now() - start > dur) {
+        clearInterval(flashTimer);
+        flashTimer = null;
+        document.title = baseTitle;
+      }
+    }, 800);
+  }
+
+  // ---- wake lock (keep screen on) ----
+  async function requestWakeLock() {
+    if (!('wakeLock' in navigator)) {
+      alert('当前浏览器不支持屏幕常亮。\niOS 请把页面加入主屏幕后再试。');
+      return false;
+    }
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => {
+        wakeChip.dataset.on = 'false';
+        wakeLbl.textContent = '屏幕常亮';
+      });
+      return true;
+    } catch (e) {
+      alert('开启屏幕常亮失败: ' + (e?.message || e));
+      return false;
+    }
+  }
+  async function releaseWakeLock() {
+    try { if (wakeLock) await wakeLock.release(); } catch {}
+    wakeLock = null;
+  }
+  // re-acquire after returning from background
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'visible' && wakeChip.dataset.on === 'true' && !wakeLock) {
+      await requestWakeLock();
+    }
+  });
+
+  // ---- core tick ----
+  let prevState = null;
+
+  function tick() {
+    const now = new Date();
+    const start = startInput.value || '12:00';
+    const end   = endInput.value   || '20:00';
+
+    nowTimeEl.textContent = fmtClock(now);
+
+    const nextStart = nextOccurrence(start, now);
+    const nextEnd   = nextOccurrence(end,   now);
+    const isEating  = nextEnd < nextStart;
+
+    const eatMin  = windowMinutes(start, end);
+    const fastMin = 1440 - eatMin;
+    eatHoursEl.textContent  = `${(eatMin/60).toFixed(eatMin%60?1:0)}h`;
+    fastHoursEl.textContent = `${(fastMin/60).toFixed(fastMin%60?1:0)}h`;
+
+    const nextSwitch = isEating ? nextEnd : nextStart;
+    const remainingMs = nextSwitch - now;
+    const phaseTotalMs = (isEating ? eatMin : fastMin) * 60 * 1000;
+    const progress = Math.max(0, Math.min(1, (phaseTotalMs - remainingMs) / phaseTotalMs));
+
+    const state = isEating ? 'eating' : 'fasting';
+    document.body.dataset.state = state;
+    stateText.textContent  = isEating ? '进食窗口中' : '禁食中';
+    phaseLabel.textContent = isEating ? '距停嘴还有' : '距开吃还有';
+    countdown.textContent  = fmtDuration(remainingMs);
+    untilText.textContent  = isEating
+      ? `${fmtHM(nextSwitch)} 结束进食`
+      : `${fmtHM(nextSwitch)} 开始进食`;
+
+    ringProg.setAttribute('stroke-dashoffset', (RING_CIRC * (1 - progress)).toFixed(2));
+
+    if (prevState && prevState !== state) {
+      if (state === 'eating') {
+        notify('可以开吃了 🍽️', `进食窗口 ${start} – ${end}`);
+        flashTitle('可以开吃了');
+      } else {
+        notify('该停嘴了 🛑', `进入 ${(fastMin/60).toFixed(0)} 小时禁食`);
+        flashTitle('该停嘴了');
+      }
+    }
+    prevState = state;
+  }
+
+  // ---- wire up ----
+  function onConfigChange() {
+    save();
+    prevState = null;
+    tick();
+  }
+  startInput.addEventListener('change', onConfigChange);
+  endInput.addEventListener('change', onConfigChange);
+
+  soundChip.addEventListener('click', () => {
+    soundOn = !soundOn;
+    updateSoundChip();
+    save();
+    if (soundOn) {
+      unlockAudio();
+      beep();
+    }
+  });
+
+  wakeChip.addEventListener('click', async () => {
+    if (wakeChip.dataset.on === 'true') {
+      await releaseWakeLock();
+      wakeChip.dataset.on = 'false';
+      wakeLbl.textContent = '屏幕常亮';
+    } else {
+      const ok = await requestWakeLock();
+      if (ok) {
+        wakeChip.dataset.on = 'true';
+        wakeLbl.textContent = '常亮已开';
+      }
+    }
+  });
+
+  // unlock audio + request notification on first interaction
+  document.addEventListener('touchstart', function once() {
+    unlockAudio();
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {});
+    }
+    document.removeEventListener('touchstart', once);
+  }, { once: true, passive: true });
+  document.addEventListener('click', function once() {
+    unlockAudio();
+    document.removeEventListener('click', once);
+  }, { once: true });
+
+  tick();
+  setInterval(tick, 1000);
+})();
+</script>
+</body>
+</html>

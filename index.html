@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>16+8 · 间歇性禁食</title>
+<style>
+  :root {
+    --bg:           oklch(18% 0.02 250);
+    --bg-grad-1:    oklch(22% 0.04 260);
+    --bg-grad-2:    oklch(16% 0.02 245);
+    --card:         oklch(24% 0.02 250 / 0.6);
+    --border:       oklch(40% 0.02 250 / 0.4);
+    --text:         oklch(96% 0.01 250);
+    --muted:        oklch(65% 0.015 250);
+    --track:        oklch(32% 0.02 250);
+
+    --eat:          oklch(74% 0.17 145);
+    --eat-soft:     oklch(74% 0.17 145 / 0.18);
+    --fast:         oklch(78% 0.15 65);
+    --fast-soft:    oklch(78% 0.15 65 / 0.18);
+
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { height: 100%; }
+
+  body {
+    font-family: var(--sans);
+    color: var(--text);
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 0%, var(--bg-grad-1), transparent 70%),
+      radial-gradient(ellipse 60% 50% at 50% 100%, var(--bg-grad-2), transparent 70%),
+      var(--bg);
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  .app {
+    width: min(560px, 100%);
+    display: grid;
+    gap: 28px;
+  }
+
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  header h1 .accent { color: var(--muted); font-weight: 400; margin-left: 6px; }
+  .now-time {
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 28px;
+    padding: 36px 32px;
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* state-specific tinting */
+  body[data-state="eating"] .card { box-shadow: 0 0 80px -20px var(--eat-soft); }
+  body[data-state="fasting"] .card { box-shadow: 0 0 80px -20px var(--fast-soft); }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+  body[data-state="eating"] .badge {
+    background: var(--eat-soft);
+    color: var(--eat);
+  }
+  body[data-state="fasting"] .badge {
+    background: var(--fast-soft);
+    color: var(--fast);
+  }
+  .badge .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 8px currentColor;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.85); }
+  }
+
+  .ring-wrap {
+    position: relative;
+    margin: 24px auto 8px;
+    width: 280px;
+    height: 280px;
+  }
+  .ring-wrap svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring-track { stroke: var(--track); }
+  .ring-progress {
+    transition: stroke-dashoffset 0.9s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.6s ease;
+    filter: drop-shadow(0 0 12px currentColor);
+  }
+  body[data-state="eating"] .ring-progress { stroke: var(--eat); color: var(--eat); }
+  body[data-state="fasting"] .ring-progress { stroke: var(--fast); color: var(--fast); }
+
+  .ring-center {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    text-align: center;
+  }
+  .ring-center .label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .ring-center .countdown {
+    font-family: var(--mono);
+    font-size: 44px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .ring-center .until {
+    margin-top: 10px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 28px;
+  }
+  .field {
+    display: grid;
+    gap: 6px;
+  }
+  .field label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--muted);
+  }
+  .field input[type="time"] {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 500;
+    background: oklch(28% 0.02 250 / 0.5);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 14px;
+    padding: 12px 16px;
+    width: 100%;
+    color-scheme: dark;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .field input[type="time"]:hover { border-color: oklch(55% 0.04 250 / 0.6); }
+  .field input[type="time"]:focus {
+    outline: none;
+    border-color: oklch(70% 0.15 250 / 0.7);
+    background: oklch(30% 0.02 250 / 0.6);
+  }
+
+  .toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 22px;
+    padding-top: 22px;
+    border-top: 1px solid var(--border);
+  }
+  .summary {
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .summary b { color: var(--text); font-weight: 600; }
+
+  .toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--muted);
+    cursor: pointer;
+    user-select: none;
+  }
+  .toggle input { appearance: none; width: 32px; height: 18px; background: var(--track); border-radius: 999px; position: relative; cursor: pointer; transition: background 0.2s; }
+  .toggle input::after {
+    content: "";
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--text);
+    transition: transform 0.2s;
+  }
+  .toggle input:checked { background: oklch(60% 0.14 250); }
+  .toggle input:checked::after { transform: translateX(14px); }
+
+  .hint {
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .hint button {
+    background: none;
+    border: none;
+    color: oklch(75% 0.12 250);
+    cursor: pointer;
+    font-size: inherit;
+    font-family: inherit;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    padding: 0;
+  }
+  .hint button:hover { color: oklch(85% 0.14 250); }
+
+  @media (max-width: 480px) {
+    .card { padding: 28px 22px; border-radius: 22px; }
+    .ring-wrap { width: 240px; height: 240px; }
+    .ring-center .countdown { font-size: 36px; }
+    .row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body data-state="fasting">
+  <div class="app">
+    <header>
+      <h1>16 + 8 <span class="accent">间歇性禁食</span></h1>
+      <div class="now-time" id="nowTime">--:--:--</div>
+    </header>
+
+    <main class="card">
+      <span class="badge"><span class="dot"></span><span id="stateText">载入中…</span></span>
+
+      <div class="ring-wrap">
+        <svg viewBox="0 0 100 100" aria-hidden="true">
+          <circle class="ring-track" cx="50" cy="50" r="44" fill="none" stroke-width="6"/>
+          <circle id="ringProgress" class="ring-progress"
+                  cx="50" cy="50" r="44" fill="none" stroke-width="6"
+                  stroke-linecap="round"
+                  stroke-dasharray="276.46" stroke-dashoffset="276.46"/>
+        </svg>
+        <div class="ring-center">
+          <div class="label" id="phaseLabel">距下次切换</div>
+          <div class="countdown" id="countdown">--:--:--</div>
+          <div class="until" id="untilText">—</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="startInput">开始进食</label>
+          <input type="time" id="startInput" value="12:00" step="60">
+        </div>
+        <div class="field">
+          <label for="endInput">结束进食</label>
+          <input type="time" id="endInput" value="20:00" step="60">
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="summary">
+          进食 <b id="eatHours">8h</b> · 禁食 <b id="fastHours">16h</b>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="soundToggle" checked>
+          <span>提示音</span>
+        </label>
+      </div>
+    </main>
+
+    <p class="hint" id="permHint" hidden>
+      为了到点能弹出提醒， <button id="permBtn">点击允许浏览器通知</button>
+    </p>
+  </div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const startInput = $('startInput');
+  const endInput   = $('endInput');
+  const soundToggle = $('soundToggle');
+  const nowTimeEl  = $('nowTime');
+  const stateText  = $('stateText');
+  const countdown  = $('countdown');
+  const untilText  = $('untilText');
+  const phaseLabel = $('phaseLabel');
+  const ringProg   = $('ringProgress');
+  const eatHoursEl = $('eatHours');
+  const fastHoursEl= $('fastHours');
+  const permHint   = $('permHint');
+  const permBtn    = $('permBtn');
+
+  const STORE_KEY = 'fasting-16-8-config-v1';
+  const RING_CIRC = 2 * Math.PI * 44; // = 276.46
+
+  // ---- persistence ----
+  function loadConfig() {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch { return null; }
+  }
+  function saveConfig() {
+    const cfg = {
+      start: startInput.value,
+      end:   endInput.value,
+      sound: soundToggle.checked,
+    };
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(cfg)); } catch {}
+  }
+  const stored = loadConfig();
+  if (stored) {
+    if (stored.start) startInput.value = stored.start;
+    if (stored.end)   endInput.value   = stored.end;
+    if (typeof stored.sound === 'boolean') soundToggle.checked = stored.sound;
+  }
+
+  // ---- time math ----
+  function parseHHMM(s) {
+    const [h, m] = s.split(':').map(Number);
+    return { h: h|0, m: m|0 };
+  }
+  function nextOccurrence(hhmm, now) {
+    const { h, m } = parseHHMM(hhmm);
+    const d = new Date(now);
+    d.setHours(h, m, 0, 0);
+    if (d <= now) d.setDate(d.getDate() + 1);
+    return d;
+  }
+  function windowMinutes(startHHMM, endHHMM) {
+    const s = parseHHMM(startHHMM);
+    const e = parseHHMM(endHHMM);
+    let diff = (e.h*60 + e.m) - (s.h*60 + s.m);
+    if (diff <= 0) diff += 24*60;
+    return diff;
+  }
+  function fmtClock(d) {
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  }
+  function fmtDuration(ms) {
+    if (ms < 0) ms = 0;
+    const s = Math.floor(ms / 1000);
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${pad(h)}:${pad(m)}:${pad(sec)}`;
+  }
+  function fmtHM(d) {
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  // ---- audio beep ----
+  let audioCtx = null;
+  function beep() {
+    if (!soundToggle.checked) return;
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const ctx = audioCtx;
+      const playTone = (freq, when, dur) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0001, ctx.currentTime + when);
+        gain.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + when + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + when + dur);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(ctx.currentTime + when);
+        osc.stop(ctx.currentTime + when + dur + 0.05);
+      };
+      playTone(880, 0,    0.25);
+      playTone(660, 0.30, 0.25);
+      playTone(880, 0.60, 0.35);
+    } catch {}
+  }
+
+  // ---- title flashing ----
+  const baseTitle = document.title;
+  let flashTimer = null;
+  function flashTitle(msg, durationMs = 20000) {
+    if (flashTimer) { clearInterval(flashTimer); flashTimer = null; }
+    let on = true;
+    const start = Date.now();
+    flashTimer = setInterval(() => {
+      document.title = on ? `🔔 ${msg}` : baseTitle;
+      on = !on;
+      if (Date.now() - start > durationMs) {
+        clearInterval(flashTimer);
+        flashTimer = null;
+        document.title = baseTitle;
+      }
+    }, 800);
+  }
+
+  // ---- notifications ----
+  function updatePermHint() {
+    if (!('Notification' in window)) { permHint.hidden = true; return; }
+    permHint.hidden = Notification.permission !== 'default';
+  }
+  permBtn?.addEventListener('click', async () => {
+    if (!('Notification' in window)) return;
+    try { await Notification.requestPermission(); } catch {}
+    updatePermHint();
+  });
+  updatePermHint();
+
+  function notify(title, body) {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      try { new Notification(title, { body, silent: true }); } catch {}
+    }
+    beep();
+    flashTitle(title);
+  }
+
+  // ---- core tick ----
+  let prevState = null; // 'eating' | 'fasting'
+
+  function tick() {
+    const now = new Date();
+    const start = startInput.value || '12:00';
+    const end   = endInput.value   || '20:00';
+
+    nowTimeEl.textContent = fmtClock(now);
+
+    const nextStart = nextOccurrence(start, now);
+    const nextEnd   = nextOccurrence(end,   now);
+    // If end comes before start in the future, we're currently in the eating window
+    const isEating = nextEnd < nextStart;
+
+    const eatMin  = windowMinutes(start, end);
+    const fastMin = 24*60 - eatMin;
+    eatHoursEl.textContent  = `${(eatMin/60).toFixed(eatMin%60?1:0)}h`;
+    fastHoursEl.textContent = `${(fastMin/60).toFixed(fastMin%60?1:0)}h`;
+
+    const nextSwitch = isEating ? nextEnd : nextStart;
+    const remainingMs = nextSwitch - now;
+
+    const phaseTotalMs = (isEating ? eatMin : fastMin) * 60 * 1000;
+    const elapsedMs = phaseTotalMs - remainingMs;
+    const progress = Math.max(0, Math.min(1, elapsedMs / phaseTotalMs));
+
+    // visuals
+    const state = isEating ? 'eating' : 'fasting';
+    document.body.dataset.state = state;
+    stateText.textContent = isEating ? '进食窗口中' : '禁食中';
+    phaseLabel.textContent = isEating ? '距停嘴还有' : '距开吃还有';
+    countdown.textContent = fmtDuration(remainingMs);
+    untilText.textContent = isEating
+      ? `${fmtHM(nextSwitch)} 结束进食`
+      : `${fmtHM(nextSwitch)} 开始进食`;
+
+    ringProg.setAttribute('stroke-dasharray', RING_CIRC.toFixed(2));
+    ringProg.setAttribute('stroke-dashoffset', (RING_CIRC * (1 - progress)).toFixed(2));
+
+    // transition detection
+    if (prevState && prevState !== state) {
+      if (state === 'eating') {
+        notify('可以开吃了 🍽️', `进食窗口开启 · ${start} – ${end}`);
+      } else {
+        notify('该停嘴了 🛑', `进入 ${(fastMin/60).toFixed(0)} 小时禁食`);
+      }
+    }
+    prevState = state;
+  }
+
+  // ---- wire up ----
+  function onInputChange() {
+    saveConfig();
+    // reset prevState so we don't fire a fake transition when window changes
+    prevState = null;
+    tick();
+  }
+  startInput.addEventListener('change', onInputChange);
+  endInput.addEventListener('change', onInputChange);
+  soundToggle.addEventListener('change', saveConfig);
+
+  // proactively request permission once after first user interaction
+  document.addEventListener('click', function once() {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().finally(updatePermHint);
+    }
+    document.removeEventListener('click', once);
+  }, { once: true });
+
+  tick();
+  setInterval(tick, 1000);
+})();
+</script>
+</body>
+</html>
