@@ -1,5 +1,9 @@
 # 16+8 Intermittent Fasting Tracker (16+8 间歇性禁食闹钟)
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Python 3](https://img.shields.io/badge/python-3-blue.svg)](https://www.python.org/)
+[![GitHub stars](https://img.shields.io/github/stars/T1113/16-8-fasting-tracker?style=social)](https://github.com/T1113/16-8-fasting-tracker/stargazers)
+
 A multi-platform 16:8 intermittent fasting tracker and timer. This project provides multiple interfaces for tracking your fasting and eating windows, all sharing a single, unified configuration logic.
 
 这是一个多平台的 16+8 间歇性禁食追踪器与闹钟。本项目提供了多种界面供你记录进食和禁食窗口，且所有界面的设置逻辑互通、无缝同步。
